@@ -3,7 +3,7 @@ pipeline {
 
   environment {
     IMAGE_NAME = 'princemitnick/fastapi-ci-cd'
-    DOCKERHUB_CREDENTIALS_ID = 'dockerhub-creds'
+    DOCKERHUB_CREDENTIALS_ID = 'dockerhub-secrets'
   }
 
   stages {
