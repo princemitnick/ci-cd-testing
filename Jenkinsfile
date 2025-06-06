@@ -40,3 +40,15 @@ pipeline {
     }
   }
 }
+
+post {
+  failure {
+    echo "The build step failed"
+  }
+  success {
+    echo "Build was successful"
+  }
+  always {
+    echo "This run always."
+  }
+}
