@@ -16,7 +16,7 @@ pipeline {
     stage('Build Docker Image') {
       steps {
         script {
-          docker.build("${IMAGE_NAME}:4.1")
+          docker.build("${IMAGE_NAME}:latest")
         }
       }
     }
@@ -34,7 +34,7 @@ pipeline {
     stage('Push to DockerHub'){
       steps {
         script {
-          docker.image("${IMAGE_NAME}:4.1").push()
+          docker.image("${IMAGE_NAME}:latest").push()
         }
       }
     }
