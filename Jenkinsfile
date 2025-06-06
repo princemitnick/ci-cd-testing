@@ -1,0 +1,42 @@
+pipeline {
+  agent any
+
+  environment {
+    IMAGE_NAME = 'princemitnick/fastapi-ci-cd'
+    DOCKERHUB_CREDENTIALS_ID = 'dockerhub-creds'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        git branch: 'main', url: 'https://github.com/princemitnick/ci-cd-testing.git'
+      }
+    }
+
+    stage('Build Docker Image') {
+      steps {
+        script {
+          docker.build("${IMAGE_NAME}:latest")
+        }
+      }
+    }
+
+    stage('DockerHub Login') {
+      steps {
+        script {
+          docker.withRegistry('', "${DOCKERHUB_CREDENTIALS_ID}") {
+            echo "Logged in"
+          }
+        }
+      }
+    }
+
+    stage('Push to DockerHub'){
+      steps {
+        script {
+          docker.image("${IMAGE_NAME}:4.1").push()
+        }
+      }
+    }
+  }
+}
