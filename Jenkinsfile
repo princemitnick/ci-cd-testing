@@ -16,7 +16,7 @@ pipeline {
     stage('Build Docker Image') {
       steps {
         script {
-          docker.build("${IMAGE_NAME}:princemitnick/fastapi-ci-cd:4.1")
+          docker.build("${IMAGE_NAME}:4.1")
         }
       }
     }
