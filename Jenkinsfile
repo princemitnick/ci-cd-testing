@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    IMAGE_NAME = 'princemitnick/fastapi-ci-cd'
+    IMAGE_NAME = 'princemitnick/ci-cd-tasks'
     DOCKERHUB_CREDENTIALS_ID = 'dockerhub-secrets'
   }
 
@@ -24,7 +24,7 @@ pipeline {
     stage('DockerHub Login') {
       steps {
         script {
-          docker.withRegistry('', "${DOCKERHUB_CREDENTIALS_ID}") {
+          docker.withRegistry('https://index.docker.io/v1/', "${DOCKERHUB_CREDENTIALS_ID}") {
             echo "Logged in"
           }
         }
