@@ -2,54 +2,54 @@ pipeline {
   agent any
 
   environment {
-    IMAGE_NAME = 'princemitnick/fast-api-ci-cd'
     DOCKERHUB_CREDENTIALS_ID = 'dockerhub-secrets'
+    DOCKERHUB_USERNAME = 'princemintnick'
+    IMAGE_REPO = 'fast-api-ci-cd'
   }
 
   stages {
     stage('Checkout') {
       steps {
-        git branch: 'main', url: 'https://github.com/princemitnick/ci-cd-testing.git'
+        git branch: 'main', url: 'https://github.com/xxxxxxx/ci-cd-testing.git'
       }
     }
 
-    stage('Build Docker Image') {
+    stage('Build & Push Docker Image') {
       steps {
-        script {
-          dockerImage = docker.build("${IMAGE_NAME}:latest")
-        }
-      }
-    }
+        withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS_ID}", usernameVariable: 'USER', passwordVariable: 'PASSWORD')]) {
+          script {
+            def commitHash = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+            def imageName = "${DOCKERHUB_USERNAME}/${IMAGE_REPO}"
+            def tagLatest = "${imageName}:latest"
+            def tagCommit = "${imageName}:${commitHash}"
 
-    stage('DockerHub Login') {
-      steps {
-        script {
-          docker.withRegistry('https://index.docker.io/v1/', "${DOCKERHUB_CREDENTIALS_ID}") {
-            echo "Logged in"
-            dockerImage.push('latest')
+            echo "Building Docker image with tags: latest and ${commitHash}"
+
+            // Login to Docker Hub
+            sh "echo $PASSWORD | docker login -u $USER --password-stdin"
+
+            // Build and tag
+            sh "docker build -t ${tagLatest} ."
+            sh "docker tag ${tagLatest} ${tagCommit}"
+
+            // Push both tags
+            sh "docker push ${tagLatest}"
+            sh "docker push ${tagCommit}"
           }
         }
       }
     }
+  }
 
-    stage('Push to DockerHub'){
-      steps {
-        script {
-          docker.image("${IMAGE_NAME}:latest").push()
-        }
-      }
+  post {
+    success {
+      echo "✅ Build and push completed successfully"
     }
-  }
-}
-
-post {
-  failure {
-    echo "The build step failed"
-  }
-  success {
-    echo "Build was successful"
-  }
-  always {
-    echo "This run always."
+    failure {
+      echo "❌ Build or push failed"
+    }
+    always {
+      echo "📦 Pipeline finished"
+    }
   }
 }
