@@ -16,7 +16,7 @@ pipeline {
     stage('Build Docker Image') {
       steps {
         script {
-          docker.build("${IMAGE_NAME}:latest")
+          dockerImage = docker.build("${IMAGE_NAME}:latest")
         }
       }
     }
@@ -26,6 +26,7 @@ pipeline {
         script {
           docker.withRegistry('https://index.docker.io/v1/', "${DOCKERHUB_CREDENTIALS_ID}") {
             echo "Logged in"
+            dockerImage.push('latest')
           }
         }
       }
