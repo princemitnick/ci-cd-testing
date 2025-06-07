@@ -10,7 +10,7 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        git branch: 'main', url: 'https://github.com/xxxxxxx/ci-cd-testing.git'
+        git branch: 'main', url: 'https://github.com/princemitnick/ci-cd-testing.git'
       }
     }
 
