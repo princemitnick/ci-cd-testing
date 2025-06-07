@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    IMAGE_NAME = 'princemitnick/ci-cd-tasks'
+    IMAGE_NAME = 'princemitnick/fast-api-ci-cd'
     DOCKERHUB_CREDENTIALS_ID = 'dockerhub-secrets'
   }
 
