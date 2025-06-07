@@ -37,7 +37,7 @@ pipeline {
     stage('Build Docker Image') {
       steps {
         script {
-          sh "docker build -t ${TAG_LATEST}"
+          sh "docker build -t ${TAG_LATEST} ."
           sh "docker tag ${TAG_LATEST} ${TAG_BUILD}"
         }
       }
