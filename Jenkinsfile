@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    DOCKERHUB_CREDENTIALS_ID = ''
+    DOCKERHUB_CREDENTIALS_ID = 'dockerhub-secrets'
     DOCKERHUB_USERNAME = 'princemitnick'
     IMAGE_REPO = 'fast-api-ci-cd'
   }
@@ -95,7 +95,7 @@ pipeline {
         script {
           steps {
             script {
-              echo "Supression des images locales pour garder le workspace propre"
+              echo "Supression des images locales"
               sh "docker rmi ${TAG_BUILD} ${TAG_LATEST} || true"
             }
           }
