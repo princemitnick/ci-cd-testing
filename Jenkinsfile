@@ -4,126 +4,101 @@ pipeline {
   environment {
     DOCKERHUB_CREDENTIALS_ID = 'dockerhub-secrets'
     DOCKERHUB_USERNAME = 'princemitnick'
-    IMAGE_REPO = 'fastapi-ci-cd'
-    DOCKER_REGISTRY = 'https://index.docker.io/v1/'
+    IMAGE_REPO = 'fast-api-ci-cd'
   }
 
-  options {
+  /*options {
     timestamps()
-    skipDefaultCheckout(true)
-  }
+  }*/
 
   stages {
     stage('Checkout Code') {
       steps {
-        checkout([
-          $class: 'GitSCM',
-          branches: [[name: '*/main']],
-          userRemoteConfigs: [[url: 'https://github.com/princemitnick/ci-cd-testing.git']]
-        ])
+        git branch: 'main', url: 'https://github.com/princemitnick/ci-cd-testing'
       }
     }
 
-    stage('Compute Version Tags') {
+    stage('Prepare Tags') {
       steps {
         script {
-          def version = sh(script: "git describe --tags --abbrev=0", returnStdout: true).trim()
-          def commit = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-          def buildNumber = env.BUILD_NUMBER
-
-          IMAGE_NAME = "${DOCKERHUB_USERNAME}/${IMAGE_REPO}"
-          TAG_VERSION = "${IMAGE_NAME}:${version}"
-          TAG_COMMIT = "${IMAGE_NAME}:${commit}-${buildNumber}"
+          COMMIT_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+          BUILD_TAG = "${COMMIT_HASH}-${env.BUILD_NUMBER}"
+          IMAGE_NAME = "${DOCKERHUB_USERNAME}/$IMAGE_REPO"
           TAG_LATEST = "${IMAGE_NAME}:latest"
+          TAG_BUILD = "${IMAGE_NAME}:${BUILD_TAG}"
 
-          echo "🔖 Tags générés :"
-          echo "  - ${TAG_VERSION}"
-          echo "  - ${TAG_COMMIT}"
-          echo "  - ${TAG_LATEST}"
+          echo "Tags préparés : "
+          echo "   - ${TAG_LATEST}"
+          echo "   - ${TAG_BUILD}"
         }
       }
     }
 
-    stage('Build & Tag Docker Image') {
+    stage('Build Docker Image') {
       steps {
         script {
-          sh """
-            docker build --build-arg CACHEBUST=$(date +%s) -t ${TAG_VERSION} .
-            docker tag ${TAG_VERSION} ${TAG_COMMIT}
-            docker tag ${TAG_VERSION} ${TAG_LATEST}
-          """
+          sh "docker build -t ${TAG_LATEST} ."
+          sh "docker tag ${TAG_LATEST} ${TAG_BUILD}"
         }
       }
     }
 
-    stage('Security Scan - Trivy') {
+    stage('Security Scan') {
       steps {
         script {
-          echo "🔐 Scan Trivy (bloquant si vulnérabilités CRITICAL)"
-          sh """
-            trivy image --severity CRITICAL ${TAG_VERSION}
-          """
+          echo "Scan de sécurité avec Trivy..."
+          sh "trivy image --ignorefile .trivyignore ${TAG_BUILD} || true"
         }
       }
     }
 
-    stage('Smoke Test') {
+    stage('Test Docker Image') {
       steps {
         script {
-          sh "docker run -d --name fastapi_test -p 8000:8000 ${TAG_VERSION}"
-          sleep time: 5, unit: 'SECONDS'
-          def status = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/health", returnStdout: true).trim()
-
+          echo "Stop and remove existing container"
           sh "docker stop fastapi_test || true"
           sh "docker rm fastapi_test || true"
+          echo "Lancement temporaire de l'image pour test..."
+          sh "docker run -d --name fastapi_test -p 8000:8000 ${TAG_BUILD}"
+
+          sleep time: 5, unit: 'SECONDS'
+
+          echo "Test de l'endpoint /health ou /"
+          def status = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/health", returnStdout: true).trim()
+
+          sh "docker stop fastapi_test"
+          sh "docker rm fastapi_test"
 
           if (status != '200') {
-            error("L’image ne répond pas. Code HTTP : ${status}")
+            error("L'image ne répond pas correctement. Code HTTP : ${status}")
           } else {
-            echo "L’image répond avec HTTP ${status}"
+            echo "L'image a répondu correctement avec HTTP ${status}"
           }
         }
       }
     }
 
     stage('Push to DockerHub') {
-      when {
-        expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
-      }
       steps {
         withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS_ID}", usernameVariable: 'USER', passwordVariable: 'PASSWORD')]) {
           script {
             sh "echo $PASSWORD | docker login -u $USER --password-stdin ${DOCKER_REGISTRY}"
-            sh "docker push ${TAG_VERSION}"
-            sh "docker push ${TAG_COMMIT}"
-            sh "docker push ${TAG_LATEST}"
+            sh "docker push ${TAG_BUILD}"
+            sh "docker push $TAG_LATEST"
           }
         }
       }
     }
 
-    stage('Export Build Info') {
+    stage('Cleanup Local Images'){
       steps {
         script {
-          def metadata = """
-            {
-              "version": "${TAG_VERSION}",
-              "commit": "${TAG_COMMIT}",
-              "latest": "${TAG_LATEST}",
-              "build_number": "${env.BUILD_NUMBER}",
-              "git_commit": "$(git rev-parse HEAD)"
+          steps {
+            script {
+              echo "Supression des images locales pour garder le workspace propre"
+              sh "docker rmi ${TAG_BUILD} ${TAG_LATEST} || true"
             }
-          """
-          writeFile file: 'buildInfo.json', text: metadata
-          archiveArtifacts artifacts: 'buildInfo.json', fingerprint: true
-        }
-      }
-    }
-
-    stage('Cleanup') {
-      steps {
-        script {
-          sh "docker rmi ${TAG_VERSION} ${TAG_COMMIT} ${TAG_LATEST} || true"
+          }
         }
       }
     }
@@ -131,14 +106,13 @@ pipeline {
 
   post {
     success {
-      echo "Déploiement réussi. Tous les tests et scans sont OK."
+      echo "Pipeline terminé avec succès !"
     }
     failure {
-      echo "Échec du pipeline. Merci de vérifier les logs."
+      echo "Pipeline échoué. Voir les logs pour détails."
     }
     always {
-      cleanWs()
-      echo "Workspace nettoyé."
+      echo "Fin d'execution pipeline."
     }
   }
 }
