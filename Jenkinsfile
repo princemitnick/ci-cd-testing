@@ -7,9 +7,9 @@ pipeline {
     IMAGE_REPO = 'fast-api-ci-cd'
   }
 
-  options {
+  /*options {
     timestamps()
-  }
+  }*/
 
   stages {
     stage('Checkout Code') {
@@ -47,7 +47,7 @@ pipeline {
       steps {
         script {
           echo "Scan de sécurité avec Trivy..."
-          sh "trivy image ${TAG_BUILD} || true"
+          sh "trivy image --ignorefile .trivyignore ${TAG_BUILD} || true"
         }
       }
     }
