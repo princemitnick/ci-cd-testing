@@ -61,7 +61,7 @@ pipeline {
           echo "Lancement temporaire de l'image pour test..."
           sh "docker run -d --name fastapi_test -p 8000:8000 ${TAG_BUILD}"
 
-          sleep time: 5, unit: 'SECOND'
+          //sleep time: 5, unit: 'SECOND'
 
           echo "Test de l'endpoint /health ou /"
           def status = sh(script: "curl -s -o /dev/null -w '%http_code' http://localhost:8000/", returnStdout: true).trim()
