@@ -5,6 +5,7 @@ pipeline {
     DOCKERHUB_CREDENTIALS_ID = 'dockerhub-secrets'
     DOCKERHUB_USERNAME = 'princemitnick'
     IMAGE_REPO = 'fast-api-ci-cd'
+    AUTHOR = "Prince"
   }
 
   /*options {
