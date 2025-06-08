@@ -90,7 +90,7 @@ pipeline {
       }
     }
 
-    stage('Cleanup Local Images'){
+    stage('Cleanup Local Images') {
       steps {
         script {
           steps {
