@@ -55,6 +55,9 @@ pipeline {
     stage('Test Docker Image') {
       steps {
         script {
+          echo "Stop and remove existing container"
+          sh "docker stop fastapi_test || true"
+          sh "docker rm fastapi_test || true"
           echo "Lancement temporaire de l'image pour test..."
           sh "docker run -d --name fastapi_test -p 8000:8000 ${TAG_BUILD}"
 
