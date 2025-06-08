@@ -64,7 +64,7 @@ pipeline {
           sleep time: 5, unit: 'SECONDS'
 
           echo "Test de l'endpoint /health ou /"
-          def status = sh(script: "curl -s -o /dev/null -w '%http_code' http://localhost:8000/", returnStdout: true).trim()
+          def status = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/health", returnStdout: true).trim()
 
           sh "docker stop fastapi_test"
           sh "docker rm fastapi_test"
