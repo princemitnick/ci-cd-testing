@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    DOCKERHUB_CREDENTIALS_ID = 'dockerhub-secrets'
+    DOCKERHUB_CREDENTIALS_ID = ''
     DOCKERHUB_USERNAME = 'princemitnick'
     IMAGE_REPO = 'fast-api-ci-cd'
   }
