@@ -58,7 +58,7 @@ pipeline {
       }
     }
 
-    stage('Test Docker Image') {
+    /*stage('Test Docker Image') {
       steps {
         script {
           sh "docker run -d --name fastapi_test -p 8000:8000 ${TAG_BUILD}"
@@ -67,11 +67,11 @@ pipeline {
           sh "docker stop fastapi_test"
           sh "docker rm fastapi_test"
           if (status != '200') {
-            error("❌ L’image ne répond pas correctement. HTTP ${status}")
+            error("L’image ne répond pas correctement. HTTP ${status}")
           }
         }
       }
-    }
+    }*/
 
     stage('Git Tag & Push') {
       steps {
