@@ -23,7 +23,7 @@ pipeline {
 
       steps {
         script {
-          COMMIT_HASH = script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+          COMMIT_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
           BUILD_TAG = "${COMMIT_HASH}-${env.BUILD_NUMBER}"
           IMAGE_NAME = "${DOCKERHUB_USERNAME}/${IMAGE_REPO}"
           TAG_LATEST = "${IMAGE_NAME}:latest"
