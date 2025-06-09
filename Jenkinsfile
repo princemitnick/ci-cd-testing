@@ -73,7 +73,7 @@ pipeline {
       }
     }*/
 
-    stage('Git Tag & Push') {
+    /*stage('Git Tag & Push') {
       steps {
         script {
           def version = "v1.0.${env.BUILD_NUMBER}"
@@ -83,7 +83,7 @@ pipeline {
           sh "git push origin ${version}"
         }
       }
-    }
+    }*/
 
     stage('Deploy to Remote Server') {
       steps {
