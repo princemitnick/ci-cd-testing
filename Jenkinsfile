@@ -87,15 +87,15 @@ pipeline {
 
     stage('Deploy to Remote Server') {
       steps {
-        sshagent(credentials: ['my-ssh-server-key']) {
-          sh '''
+        sshagent(credentials: ['ssh-server-key']) {
+          sh """
             ssh -o StrictHostKeyChecking=no test@192.168.58.108 <<EOF
             docker pull ${TAG_BUILD}
             docker stop fastapi-app || true
             docker rm fastapi-app || true
             docker run -d --name fastapi-app -p 80:8000 ${TAG_BUILD}
             EOF
-          '''
+          """
         }
       }
     }
