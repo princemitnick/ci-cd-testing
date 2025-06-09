@@ -4,42 +4,47 @@ pipeline {
   environment {
     DOCKERHUB_CREDENTIALS_ID = 'dockerhub-secrets'
     DOCKERHUB_USERNAME = 'princemitnick'
-    IMAGE_REPO = 'fast-api-ci-cd'
-    AUTHOR = "Prince"
+    IMAGE_REPO = 'fastapi-ci-cd'
+    DOCKER_REGISTRY = 'https://index.docker.io/v1/'
   }
 
-  /*options {
+  options {
     timestamps()
-  }*/
+  }
 
   stages {
     stage('Checkout Code') {
       steps {
-        git branch: 'main', url: 'https://github.com/princemitnick/ci-cd-testing'
+        git branch: 'main', url: 'https://github.com/princemitnick/ci-cd-testing.git'
       }
     }
 
     stage('Prepare Tags') {
+
       steps {
         script {
-          COMMIT_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+          COMMIT_HASH = script: 'git rev-parse --short HEAD', returnStdout: true).trim()
           BUILD_TAG = "${COMMIT_HASH}-${env.BUILD_NUMBER}"
-          IMAGE_NAME = "${DOCKERHUB_USERNAME}/$IMAGE_REPO"
+          IMAGE_NAME = "${DOCKERHUB_USERNAME}/${IMAGE_REPO}"
           TAG_LATEST = "${IMAGE_NAME}:latest"
           TAG_BUILD = "${IMAGE_NAME}:${BUILD_TAG}"
-
-          echo "Tags préparés : "
-          echo "   - ${TAG_LATEST}"
-          echo "   - ${TAG_BUILD}"
+          echo "➡️ Tags: ${TAG_LATEST}, ${TAG_BUILD}"
         }
       }
     }
 
-    stage('Build Docker Image') {
+    stage('Build Multi-Arch Docker Image') {
       steps {
-        script {
-          sh "docker build -t ${TAG_LATEST} ."
-          sh "docker tag ${TAG_LATEST} ${TAG_BUILD}"
+        withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS_ID}", usernameVariable: 'USER', passwordVariable: 'PASSWORD')]) {
+          script {
+            sh '''
+              docker login -u $USER -p $PASSWORD ${DOCKER_REGISTRY}
+              docker buildx create --use --name multiarch-builder || true
+              docker buildx build --platform linux/amd64,linux/arm64 \
+                -t ${TAG_LATEST} -t ${TAG_BUILD} \
+                --push .
+            '''
+          }
         }
       }
     }
@@ -47,8 +52,8 @@ pipeline {
     stage('Security Scan') {
       steps {
         script {
-          echo "Scan de sécurité avec Trivy..."
-          sh "trivy image --ignorefile .trivyignore ${TAG_BUILD} || true"
+          echo "🔍 Scan de sécurité avec Trivy..."
+          sh "trivy image ${TAG_BUILD} || true"
         }
       }
     }
@@ -56,50 +61,50 @@ pipeline {
     stage('Test Docker Image') {
       steps {
         script {
-          echo "Stop and remove existing container"
-          sh "docker stop fastapi_test || true"
-          sh "docker rm fastapi_test || true"
-          echo "Lancement temporaire de l'image pour test..."
           sh "docker run -d --name fastapi_test -p 8000:8000 ${TAG_BUILD}"
-
           sleep time: 5, unit: 'SECONDS'
-
-          echo "Test de l'endpoint /health ou /"
-          def status = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/health", returnStdout: true).trim()
-
+          def status = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/", returnStdout: true).trim()
           sh "docker stop fastapi_test"
           sh "docker rm fastapi_test"
-
           if (status != '200') {
-            error("L'image ne répond pas correctement. Code HTTP : ${status}")
-          } else {
-            echo "L'image a répondu correctement avec HTTP ${status}"
+            error("❌ L’image ne répond pas correctement. HTTP ${status}")
           }
         }
       }
     }
 
-    stage('Push to DockerHub') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS_ID}", usernameVariable: 'USER', passwordVariable: 'PASSWORD')]) {
-          script {
-            sh "echo $PASSWORD | docker login -u $USER --password-stdin ${DOCKER_REGISTRY}"
-            sh "docker push ${TAG_BUILD}"
-            sh "docker push $TAG_LATEST"
-          }
-        }
-      }
-    }
-
-    stage('Cleanup Local Images'){
+    stage('Git Tag & Push') {
       steps {
         script {
-          steps {
-            script {
-              echo "Supression des images locales"
-              sh "docker rmi ${TAG_BUILD} ${TAG_LATEST} || true"
-            }
-          }
+          def version = "v1.0.${env.BUILD_NUMBER}"
+          sh "git config user.name 'jenkins'"
+          sh "git config user.email 'jenkins@ci.local'"
+          sh "git tag ${version}"
+          sh "git push origin ${version}"
+        }
+      }
+    }
+
+    stage('Deploy to Remote Server') {
+      steps {
+        sshagent(credentials: ['my-ssh-server-key']) {
+          sh '''
+            ssh -o StrictHostKeyChecking=no test@192.168.58.108 <<EOF
+            docker pull ${TAG_BUILD}
+            docker stop fastapi-app || true
+            docker rm fastapi-app || true
+            docker run -d --name fastapi-app -p 80:8000 ${TAG_BUILD}
+            EOF
+          '''
+        }
+      }
+    }
+
+    stage('Cleanup') {
+      steps {
+        script {
+          echo "Nettoyage local..."
+          sh "docker rmi ${TAG_BUILD} ${TAG_LATEST} || true"
         }
       }
     }
@@ -110,10 +115,10 @@ pipeline {
       echo "Pipeline terminé avec succès !"
     }
     failure {
-      echo "Pipeline échoué. Voir les logs pour détails."
+      echo "Échec du pipeline. Consulte les logs."
     }
     always {
-      echo "Fin d'execution pipeline."
+      echo "Fin de l’exécution du pipeline."
     }
   }
 }
