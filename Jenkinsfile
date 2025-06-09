@@ -37,13 +37,13 @@ pipeline {
       steps {
         withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS_ID}", usernameVariable: 'USER', passwordVariable: 'PASSWORD')]) {
           script {
-            sh '''
+            sh """
               docker login -u $USER -p $PASSWORD ${DOCKER_REGISTRY}
               docker buildx create --use --name multiarch-builder || true
               docker buildx build --platform linux/amd64,linux/arm64 \
                 -t ${TAG_LATEST} -t ${TAG_BUILD} \
                 --push .
-            '''
+            """
           }
         }
       }
