@@ -36,7 +36,7 @@ pipeline {
         sh '''
           docker run --rm -v $(pwd):/zap/wrk/:rw \
             ghcr.io/zaproxy/zaproxy zap-baseline.py \
-            -t ${TARGET_URL} \
+            -t ${TARGET_URL}/health \
             -r ${REPORT_HTML}
         '''
       }
