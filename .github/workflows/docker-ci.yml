@@ -23,3 +23,19 @@ jobs:
           context: .
           push: true
           tags: princemitnick/fast-api-ci-cd:latest
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Start FastAPI server
+        run: |
+          pip install fastapi uvicorn
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+
+      - name: RUN OSWAP ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.7.0
+        with:
+          target: 'http://localhost:8000'
