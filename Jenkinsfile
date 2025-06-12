@@ -35,7 +35,7 @@ pipeline {
       steps {
         sh '''
           docker run --rm -v $(pwd):/zap/wrk/:rw \
-            owasp/zap2docker-stable zap-baseline.py \
+            ghcr.io/zaproxy/zaproxy zap-baseline.py \
             -t ${TARGET_URL} \
             -r ${REPORT_HTML}
         '''
